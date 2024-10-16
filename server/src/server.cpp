@@ -1,18 +1,56 @@
 #include "server.hpp"
+#include "logger.h"
 
 std::mutex cap_mutex; 
 std::atomic<bool> stop_recording(false);
+
+string GetTheHostName()
+{
+    char hostname[HOST_NAME_MAX];
+    
+    if (gethostname(hostname, HOST_NAME_MAX) == 0) 
+    {
+        return string(hostname);
+    } 
+    else 
+    {
+        return "";
+    }
+}
 
 void handle_client(int new_socket, VideoCapture& cap) 
 {
     Mat frame;
     vector<uchar> buffer;
     int frame_size;
+    char hostname[1024] = {0};
+    string client_hostname;
+
+    int bytes_read  = read(new_socket, hostname, sizeof(hostname)-1);
+    if (bytes_read > 0)
+    {
+        hostname[bytes_read] = '\0'; 
+        client_hostname = hostname;
+        LOG(LOG_LEVEL_INFO, "\n\nConnected Client: %s\n", client_hostname.c_str()); 
+    }
+    else
+    {
+        LOG(LOG_LEVEL_ERROR, "Failed to get the  client's hostname\n");
+        close(new_socket);
+        return;
+    }
+    string  server_hostname = GetTheHostName();
+    send(new_socket, server_hostname.c_str(), server_hostname.length(), 0);
+
     char command[256];
-    int valread = recv(new_socket, command, sizeof(command), 0);
+    memset(command, 0, sizeof(command));
+
+    int valread = recv(new_socket, command, 9,0);//sizeof(command), 0);
+    std::string command1(command); 
+
     if (valread > 0 && strcmp(command, "save_data") == 0) 
     {
-        cout << "Recording video..." << endl;
+        cout << "Recording video at "<<client_hostname << endl;
         while (!stop_recording) 
         {
             {
@@ -25,7 +63,6 @@ void handle_client(int new_socket, VideoCapture& cap)
                     continue;
                 }
             }
-            
             if (frame.empty()) 
             {
                 cerr << "Received empty frame. Retrying..." << endl;
@@ -62,12 +99,10 @@ void handle_client(int new_socket, VideoCapture& cap)
             int ack_read = recv(new_socket, ack, sizeof(ack), 0);
             if (ack_read <= 0) 
             {
-                //cout << "Client disconnected while waiting for acknowledgment." << endl;
                 break;  
             }
-            //cout << "Received acknowledgment: " << ack << endl;
         }
     }
     close(new_socket);
-    cout << "Client disconnected." << endl;
+    cout << "Client disconnected : " <<client_hostname<< endl;
 }

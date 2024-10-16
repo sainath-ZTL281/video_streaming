@@ -4,6 +4,19 @@
 bool stop = false;
 #define buffer_size 1024
 
+string GetTheHostName()
+{
+    char hostname[HOST_NAME_MAX];
+    if (gethostname(hostname, HOST_NAME_MAX) == 0) 
+    {
+        return string(hostname);
+    } 
+    else 
+    {
+        return "";
+    }
+}
+
 string get_timestamp() 
 {
     auto now = chrono::system_clock::now();

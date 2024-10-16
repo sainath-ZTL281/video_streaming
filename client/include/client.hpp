@@ -29,3 +29,4 @@ int ConnectToServer(int sock, const char *server_ip, int port);
 void record_video(int sock);
 
 void process_command(int sock);
+string GetTheHostName();

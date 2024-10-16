@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
             cerr << "Accept failed" << endl;
             continue;
         }
-        cout << "New client connected" << endl;
+        //cout << "New client connected "<< endl;
         client_threads.emplace_back(handle_client, new_socket, ref(cap));
     }
     for (auto& t : client_threads) 
