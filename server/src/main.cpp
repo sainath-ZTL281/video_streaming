@@ -1,8 +1,7 @@
 #include "logger.h"
 #include "server.hpp"
 
-bool stop_recording = false;
-
+std::vector<thread> client_threads;
 
 int main(int argc, char *argv[]) 
 {
@@ -12,7 +11,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     const int port = stoi(argv[1]);
-
 
     int server_fd, new_socket;
     struct sockaddr_in address;
@@ -40,12 +38,12 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, 10) < 0) 
+    if (listen(server_fd, SOMAXCONN) < 0) 
     {
         cerr << "Listen failed" << endl;
         exit(EXIT_FAILURE);
     }
-    cout<<"Server listening for the clients : "<<endl;
+    cout << "Server listening for clients on port " << port << endl;
     //VideoCapture cap("http://10.10.3.43:8080/video"); 
     VideoCapture cap(0); 
 
@@ -55,13 +53,29 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    namedWindow("Server Video Stream", WINDOW_AUTOSIZE);
-    
-    while ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) >= 0) 
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    //namedWindow("Server Video Stream", WINDOW_AUTOSIZE);
+
+    while (true) 
     {
-        cout << "Client connected" << endl;
-        thread(handle_client, new_socket, ref(cap)).detach();
+        int new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+        if (new_socket < 0) 
+        {
+            cerr << "Accept failed" << endl;
+            continue;
+        }
+        cout << "New client connected" << endl;
+        client_threads.emplace_back(handle_client, new_socket, ref(cap));
     }
+    for (auto& t : client_threads) 
+    {
+        if (t.joinable()) 
+        {
+            t.join();
+        }
+    }
+
 
     cap.release();
     close(server_fd);

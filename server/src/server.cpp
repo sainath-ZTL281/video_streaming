@@ -1,7 +1,7 @@
 #include "server.hpp"
 
 std::mutex cap_mutex; 
-
+std::atomic<bool> stop_recording(false);
 
 void handle_client(int new_socket, VideoCapture& cap) 
 {
@@ -15,63 +15,69 @@ void handle_client(int new_socket, VideoCapture& cap)
 
     if (valread > 0 && strcmp(command, "save_data") == 0) 
     {
-        while (true) 
+        cout << "Recording video..." << endl;
+        while (!stop_recording) 
         {
-            
-            cout << "Recording video..." << endl;
-            while (!stop_recording) 
             {
-                {
-                    std::lock_guard<std::mutex> lock(cap_mutex); 
-                    cap >> frame;
-                }
-                
-                if (frame.empty()) 
-                {
-                    cerr << "Received empty frame. Stopping recording..." << endl;
-                    break;
-                }
-                if (imencode(".jpg", frame, buffer)) 
-                {
-                    frame_size = buffer.size();
-                    //cout << "Sending frame of size: " << frame_size << " bytes" << endl;
-                } 
-                else 
-                {
-                    cerr << "Failed to encode frame." << endl;
-                    continue; 
-                }
-                if (send(new_socket, (char*)&frame_size, sizeof(frame_size), 0) <= 0)
-                {
-                    cout << "Client disconnected while sending frame size." << endl;
-                    break;  
-                }
-                int sent_size = send(new_socket, buffer.data(), frame_size, 0);
-                if (sent_size <= 0)
+                std::lock_guard<std::mutex> lock(cap_mutex); 
+                cap >> frame;
+            }
+            
+            if (frame.empty()) 
+            {
+                cerr << "Received empty frame. Stopping recording..." << endl;
+                break;
+            }
+            if (imencode(".jpg", frame, buffer)) 
+            {
+                frame_size = buffer.size();
+                //cout << "Sending frame of size: " << frame_size << " bytes" << endl;
+            } 
+            else 
+            {
+                cerr << "Failed to encode frame." << endl;
+                continue; 
+            }
+            if (send(new_socket, (char*)&frame_size, sizeof(frame_size), 0) <= 0)
+            {
+                cout << "Client disconnected while sending frame size." << endl;
+                break;  
+            }
+            // int sent_size = send(new_socket, buffer.data(), frame_size, 0);
+            // if (sent_size <= 0)
+            // {
+            //     cout << "Client disconnected while sending frame data." << endl;
+            //     break;  
+            // }
+            // std::cout << "Sent size : " << sent_size << endl;
+
+            int total_sent = 0;
+            while (total_sent < frame_size) 
+            {
+                int sent_size = send(new_socket, buffer.data() + total_sent, frame_size - total_sent, 0);
+                if (sent_size <= 0) 
                 {
                     cout << "Client disconnected while sending frame data." << endl;
-                    break;  
+                    break;
                 }
-
-                std::cout << "Sent size : " << sent_size << endl;
-                char ack[10] = {0}; 
-                int ack_read = recv(new_socket, ack, sizeof(ack), 0);
-                if (ack_read <= 0) 
-                {
-                    cout << "Client disconnected while waiting for acknowledgment." << endl;
-                    break;  
-                }
-                cout << "Received acknowledgment: " << ack << endl;
-
-                video.write(frame);
+                total_sent += sent_size;
             }
 
-            video.release();
-            stop_recording = false; 
-            break;
-        
+            if (total_sent < frame_size) 
+            {
+                break;
+            }
+            char ack[10] = {0}; 
+            int ack_read = recv(new_socket, ack, sizeof(ack), 0);
+            if (ack_read <= 0) 
+            {
+                cout << "Client disconnected while waiting for acknowledgment." << endl;
+                break;  
+            }
+            //cout << "Received acknowledgment: " << ack << endl;
+            video.write(frame);
         }
-
+        video.release();
     }
     close(new_socket);
     cout << "Client disconnected." << endl;
