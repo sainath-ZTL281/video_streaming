@@ -4,7 +4,7 @@ int main(int argc, char *argv[])
 {
     if(argc < 3)
     {
-        cerr << "\nUsage: ./build/client <server_ip> <port>\n" << endl;
+        cerr << "\nUsage: ./client <server_ip> <port>\n" << endl;
         return -1;
     }
     const char *server_ip = argv[1];

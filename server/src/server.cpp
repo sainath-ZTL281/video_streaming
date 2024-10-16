@@ -1,27 +1,7 @@
 #include "server.hpp"
 
-// std::string getIPAddress() 
-// {
-//     char host[256];
-//     struct hostent *host_entry;
-    
-//     // Retrieve the hostname
-//     if (gethostname(host, sizeof(host)) == -1) 
-//     {
-//         std::cerr << "Error getting hostname" << std::endl;
-//         return "";
-//     }
+std::mutex cap_mutex; 
 
-//     // Retrieve host information
-//     host_entry = gethostbyname(host);
-//     if (host_entry == nullptr) {
-//         std::cerr << "Error getting host entry" << std::endl;
-//         return "";
-//     }
-
-//     // Convert the address to IPv4 and return as string
-//     return inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0]));
-// }
 
 void handle_client(int new_socket, VideoCapture& cap) 
 {
@@ -37,11 +17,15 @@ void handle_client(int new_socket, VideoCapture& cap)
     {
         while (true) 
         {
-
+            
             cout << "Recording video..." << endl;
             while (!stop_recording) 
             {
-                cap >> frame;
+                {
+                    std::lock_guard<std::mutex> lock(cap_mutex); 
+                    cap >> frame;
+                }
+                
                 if (frame.empty()) 
                 {
                     cerr << "Received empty frame. Stopping recording..." << endl;

@@ -3,11 +3,12 @@
 
 bool stop_recording = false;
 
+
 int main(int argc, char *argv[]) 
 {
     if(argc < 2)
     {
-        cerr << "\nUsage: ./build/server <port>\n" << endl;
+        cerr << "\nUsage: ./server <port>\n" << endl;
         return -1;
     }
     const int port = stoi(argv[1]);
@@ -39,13 +40,12 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, 3) < 0) 
+    if (listen(server_fd, 10) < 0) 
     {
         cerr << "Listen failed" << endl;
         exit(EXIT_FAILURE);
     }
-    //LOG(LOG_LEVEL_INFO,"\n\nServer listening at: %s\n", getIPAddress() );
-    //cout<<"Server listening at: "<<endl;
+    cout<<"Server listening for the clients : "<<endl;
     //VideoCapture cap("http://10.10.3.43:8080/video"); 
     VideoCapture cap(0); 
 
