@@ -48,7 +48,6 @@ void record_video(int sock)
     }
 
     send(sock, "ACK", 3, 0);
-    // Decode the frame
     Mat frame = imdecode(buffer, IMREAD_COLOR);
     if (frame.empty()) 
     {
@@ -70,7 +69,7 @@ void record_video(int sock)
         }
 
         buffer.resize(frame_size);
-        std::cout << "Frame size : " << frame_size << std::endl; 
+        //std::cout << "Frame size : " << frame_size << std::endl; 
         int total_bytes_received = 0;
         while (total_bytes_received < frame_size) 
         {
@@ -89,7 +88,6 @@ void record_video(int sock)
         }
 
         send(sock, "ACK", 3, 0);
-        // Decode the frame
         Mat frame = imdecode(buffer, IMREAD_COLOR);
         if (frame.empty()) 
         {
@@ -109,8 +107,6 @@ void record_video(int sock)
     video.release();
     cout << "Video saved as " << filename << endl;
 }
-
-
 void process_command(int sock) 
 {
     char buffer[1024] = {0};
@@ -151,15 +147,12 @@ int ConnectToServer(int sock, const char *server_ip, int port)
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
-
     // Convert IP from text to binary
     if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0)
     {
         LOG(LOG_LEVEL_ERROR, "Invalid address/Address not supported\n");
         return -1;
     }
-
-    
     if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
     {
         LOG(LOG_LEVEL_ERROR, "Failed to connect: %d\n", errno);

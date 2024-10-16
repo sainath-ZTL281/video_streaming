@@ -10,9 +10,6 @@ void handle_client(int new_socket, VideoCapture& cap)
     int frame_size;
     char command[256];
     int valread = recv(new_socket, command, sizeof(command), 0);
-    string filename = "server_video_" + to_string(time(nullptr)) + ".mp4";
-    VideoWriter video(filename, VideoWriter::fourcc('m', 'p', '4', 'v'), 30, Size(frame.cols, frame.rows));
-
     if (valread > 0 && strcmp(command, "save_data") == 0) 
     {
         cout << "Recording video..." << endl;
@@ -20,13 +17,20 @@ void handle_client(int new_socket, VideoCapture& cap)
         {
             {
                 std::lock_guard<std::mutex> lock(cap_mutex); 
-                cap >> frame;
+                //cap >> frame;
+                if (!cap.read(frame)) 
+                {
+                    cerr << "Failed to read frame from camera" << endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                }
             }
             
             if (frame.empty()) 
             {
-                cerr << "Received empty frame. Stopping recording..." << endl;
-                break;
+                cerr << "Received empty frame. Retrying..." << endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
             }
             if (imencode(".jpg", frame, buffer)) 
             {
@@ -43,27 +47,14 @@ void handle_client(int new_socket, VideoCapture& cap)
                 cout << "Client disconnected while sending frame size." << endl;
                 break;  
             }
-            // int sent_size = send(new_socket, buffer.data(), frame_size, 0);
-            // if (sent_size <= 0)
-            // {
-            //     cout << "Client disconnected while sending frame data." << endl;
-            //     break;  
-            // }
-            // std::cout << "Sent size : " << sent_size << endl;
-
-            int total_sent = 0;
-            while (total_sent < frame_size) 
+            int sent_size = send(new_socket, buffer.data(), frame_size, 0);
+            if (sent_size <= 0)
             {
-                int sent_size = send(new_socket, buffer.data() + total_sent, frame_size - total_sent, 0);
-                if (sent_size <= 0) 
-                {
-                    cout << "Client disconnected while sending frame data." << endl;
-                    break;
-                }
-                total_sent += sent_size;
+                cout << "Client disconnected while sending frame data." << endl;
+                break;  
             }
-
-            if (total_sent < frame_size) 
+            //std::cout << "Sent size : " << sent_size << endl;
+            if (sent_size < frame_size) 
             {
                 break;
             }
@@ -71,13 +62,11 @@ void handle_client(int new_socket, VideoCapture& cap)
             int ack_read = recv(new_socket, ack, sizeof(ack), 0);
             if (ack_read <= 0) 
             {
-                cout << "Client disconnected while waiting for acknowledgment." << endl;
+                //cout << "Client disconnected while waiting for acknowledgment." << endl;
                 break;  
             }
             //cout << "Received acknowledgment: " << ack << endl;
-            video.write(frame);
         }
-        video.release();
     }
     close(new_socket);
     cout << "Client disconnected." << endl;

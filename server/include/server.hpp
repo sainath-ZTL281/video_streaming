@@ -9,6 +9,8 @@
 #include <atomic>
 #include <vector>
 
+#include <chrono>
+
 using namespace cv;
 using namespace std;
 extern std::mutex cap_mutex;  

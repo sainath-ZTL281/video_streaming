@@ -45,7 +45,8 @@ int main(int argc, char *argv[])
     }
     cout << "Server listening for clients on port " << port << endl;
     //VideoCapture cap("http://10.10.3.43:8080/video"); 
-    VideoCapture cap(0); 
+    VideoCapture cap; 
+    cap.open(0);
 
     if (!cap.isOpened()) 
     {
@@ -53,10 +54,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+     cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
     //namedWindow("Server Video Stream", WINDOW_AUTOSIZE);
-
     while (true) 
     {
         int new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
@@ -75,8 +75,6 @@ int main(int argc, char *argv[])
             t.join();
         }
     }
-
-
     cap.release();
     close(server_fd);
     return 0;
