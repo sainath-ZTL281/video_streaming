@@ -107,6 +107,7 @@ void RecordVideo(int sock)
         {
             cv::destroyAllWindows();
             LOG(LOG_LEVEL_INFO,"\n\nStopping recording...\n");
+            send(sock, "STOP", 4, 0); 
             break;
         }
     }

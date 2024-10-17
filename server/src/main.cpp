@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     LOG(LOG_LEVEL_INFO,"\n\nServer listening for clients on port %d",port);
-    //VideoCapture cap("http://10.10.3.43:8080/video"); 
+    //VideoCapture cap("https://10.10.3.43:8080/video"); 
     VideoCapture cap; 
     cap.open(0);
 
