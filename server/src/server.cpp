@@ -18,7 +18,7 @@ string GetTheHostName()
     }
 }
 
-void handle_client(int new_socket, VideoCapture& cap) 
+void HandleClient(int new_socket, VideoCapture& cap) 
 {
     Mat frame;
     vector<uchar> buffer;
@@ -45,52 +45,49 @@ void handle_client(int new_socket, VideoCapture& cap)
     char command[256];
     memset(command, 0, sizeof(command));
 
-    int valread = recv(new_socket, command, 9,0);//sizeof(command), 0);
+    int valread = recv(new_socket, command, 9,0);
     std::string command1(command); 
 
     if (valread > 0 && strcmp(command, "save_data") == 0) 
     {
-        cout << "Recording video at "<<client_hostname << endl;
+        LOG(LOG_LEVEL_INFO, "\n\nRecording started by client: %s\n", client_hostname.c_str());
         while (!stop_recording) 
         {
             {
                 std::lock_guard<std::mutex> lock(cap_mutex); 
-                //cap >> frame;
                 if (!cap.read(frame)) 
                 {
-                    cerr << "Failed to read frame from camera" << endl;
+                    LOG(LOG_LEVEL_ERROR,"\nfailed to read frame from server camera");
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     continue;
                 }
             }
             if (frame.empty()) 
             {
-                cerr << "Received empty frame. Retrying..." << endl;
+                LOG(LOG_LEVEL_ERROR,"\nReceived empty frame. Retrying...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
             if (imencode(".jpg", frame, buffer)) 
             {
                 frame_size = buffer.size();
-                //cout << "Sending frame of size: " << frame_size << " bytes" << endl;
             } 
             else 
             {
-                cerr << "Failed to encode frame." << endl;
+                LOG(LOG_LEVEL_ERROR, "\nFailed to encode frame.");
                 continue; 
             }
             if (send(new_socket, (char*)&frame_size, sizeof(frame_size), 0) <= 0)
             {
-                cout << "Client disconnected while sending frame size." << endl;
+                LOG(LOG_LEVEL_INFO,"\nClient disconnected while sending frame size.");
                 break;  
             }
             int sent_size = send(new_socket, buffer.data(), frame_size, 0);
             if (sent_size <= 0)
             {
-                cout << "Client disconnected while sending frame data." << endl;
+                LOG(LOG_LEVEL_INFO, "\nClient disconnected while sending frame data.");
                 break;  
             }
-            //std::cout << "Sent size : " << sent_size << endl;
             if (sent_size < frame_size) 
             {
                 break;
@@ -104,5 +101,5 @@ void handle_client(int new_socket, VideoCapture& cap)
         }
     }
     close(new_socket);
-    cout << "Client disconnected : " <<client_hostname<< endl;
+    LOG(LOG_LEVEL_INFO, "\n\nClient disconnected : %s",client_hostname.c_str());
 }

@@ -16,4 +16,4 @@ using namespace std;
 extern std::mutex cap_mutex;  
 
 
-void handle_client(int new_socket, VideoCapture& cap);
+void HandleClient(int new_socket, VideoCapture& cap);

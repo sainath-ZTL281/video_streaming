@@ -1,10 +1,10 @@
 #include "client.hpp"
-
+#include "logger.h"
 int main(int argc, char *argv[]) 
 {
     if(argc < 3)
     {
-        cerr << "\nUsage: ./client <server_ip> <port>\n" << endl;
+        LOG(LOG_LEVEL_ERROR,"\n\nUsage: ./client <server_ip> <port>\n\n");
         return -1;
     }
     const char *server_ip = argv[1];
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     {
         LOG(LOG_LEVEL_ERROR, "\n\nFailed to get the  server's hostname\n");
     }
-    process_command(sock);
+    ProcessCommand(sock);
     close(sock);
     return 0;
 }

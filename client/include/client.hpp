@@ -26,7 +26,7 @@ using namespace std;
 
 int CreateSocket();
 int ConnectToServer(int sock, const char *server_ip, int port);
-void record_video(int sock);
+void RecordVideo(int sock);
 
-void process_command(int sock);
+void ProcessCommand(int sock);
 string GetTheHostName();

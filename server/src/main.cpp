@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     if(argc < 2)
     {
-        cerr << "\nUsage: ./server <port>\n" << endl;
+        LOG(LOG_LEVEL_ERROR,"\n\nUsage: ./server <port>\n\n");
         return -1;
     }
     const int port = stoi(argv[1]);
@@ -18,13 +18,13 @@ int main(int argc, char *argv[])
     int addrlen = sizeof(address);
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
     {
-        cerr << "Socket failed" << endl;
+        LOG(LOG_LEVEL_ERROR,"\nSocket failed");
         exit(EXIT_FAILURE);
     }
     
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) 
     {
-        cerr << "setsockopt failed" << endl;
+        LOG(LOG_LEVEL_ERROR, "\nsetsockopt failed");
         exit(EXIT_FAILURE);
     }
 
@@ -34,39 +34,37 @@ int main(int argc, char *argv[])
 
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) 
     {
-        cerr << "Bind failed" << endl;
+        LOG(LOG_LEVEL_ERROR,"\nBind failed");
         exit(EXIT_FAILURE);
     }
 
     if (listen(server_fd, SOMAXCONN) < 0) 
     {
-        cerr << "Listen failed" << endl;
+        LOG(LOG_LEVEL_ERROR,"\nListen failed");
         exit(EXIT_FAILURE);
     }
-    cout << "Server listening for clients on port " << port << endl;
+    LOG(LOG_LEVEL_INFO,"\n\nServer listening for clients on port %d",port);
     //VideoCapture cap("http://10.10.3.43:8080/video"); 
     VideoCapture cap; 
     cap.open(0);
 
     if (!cap.isOpened()) 
     {
-        cerr << "Cannot open the video stream." << endl;
+        LOG(LOG_LEVEL_ERROR,"\nCan't open video stream");
         return -1;
     }
 
-     cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-    //namedWindow("Server Video Stream", WINDOW_AUTOSIZE);
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
     while (true) 
     {
         int new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
         if (new_socket < 0) 
         {
-            cerr << "Accept failed" << endl;
+            LOG(LOG_LEVEL_ERROR,"\nAccept failed");
             continue;
         }
-        //cout << "New client connected "<< endl;
-        client_threads.emplace_back(handle_client, new_socket, ref(cap));
+        client_threads.emplace_back(HandleClient, new_socket, ref(cap));
     }
     for (auto& t : client_threads) 
     {

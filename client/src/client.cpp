@@ -17,7 +17,7 @@ string GetTheHostName()
     }
 }
 
-string get_timestamp() 
+string GetTimestamp() 
 {
     auto now = chrono::system_clock::now();
     auto in_time_t = chrono::system_clock::to_time_t(now);
@@ -26,77 +26,70 @@ string get_timestamp()
     return string(buf);
 }
 
-void record_video(int sock) 
+void RecordVideo(int sock) 
 {
     vector<uchar> buffer;
     int frame_size;
 
-    string filename = "client_video_" + get_timestamp() + ".mp4";
+    string filename = "client_video_" + GetTimestamp() + ".mp4";
 
-    // Receive frame size
     int bytes_received = recv(sock, (char*)&frame_size, sizeof(frame_size), 0);
     if (bytes_received <= 0) 
     {
-        cerr << "Server has closed the connection. Stopping..." << endl;
+        LOG(LOG_LEVEL_ERROR,"\nServer has closed the connection. Stopping...");
         exit(0);
     }
-    // Resize buffer to the received frame size
     buffer.resize(frame_size);
-    LOG(LOG_LEVEL_INFO, "Frame size : %d", frame_size);
-    //std::cout << "Frame size : " << frame_size << std::endl; 
+    //LOG(LOG_LEVEL_INFO, "\nFrame size : %d", frame_size);
     int total_bytes_received = 0;
     while (total_bytes_received < frame_size) 
     {
         int result = recv(sock, buffer.data() + total_bytes_received, frame_size - total_bytes_received, 0);
         if (result <= 0) 
         {
-            cerr << "Error receiving frame data. Stopping..." << endl;
+            LOG(LOG_LEVEL_ERROR,"\nError receiving frame data. Stopping...");
             return;
         }
         total_bytes_received += result;
     }
     if (total_bytes_received != frame_size) 
     {
-        cerr << "Warning: Received frame size (" << total_bytes_received << ") does not match expected size (" << frame_size << ")." << endl;
+        LOG(LOG_LEVEL_ERROR,"Warning: Received frame size (%d) does not match expected size (%d). ",total_bytes_received, frame_size);
     }
 
     send(sock, "ACK", 3, 0);
     Mat frame = imdecode(buffer, IMREAD_COLOR);
     if (frame.empty()) 
     {
-        cerr << "Error decoding frame." << endl;
+        LOG(LOG_LEVEL_ERROR,"\nError decoding frame.");
     }
-    //int result = RecordFrame(sock,frame_size,buffer);
     VideoWriter video(filename, VideoWriter::fourcc('m', 'p', '4', 'v'), 30, Size(frame.cols, frame.rows));
 
     LOG(LOG_LEVEL_INFO,"\n\nRecording video... Press ESC to stop. \n");
-    //cout << "Recording video... Press ESC to stop." << endl;
     while (true) 
     {
-        // Receive frame size
         int bytes_received = recv(sock, (char*)&frame_size, sizeof(frame_size), 0);
         if (bytes_received <= 0) 
         {
-            cerr << "Server has closed the connection. Stopping..." << endl;
+            LOG(LOG_LEVEL_ERROR,"\nServer has closed the connection. Stopping...");
             break;
         }
 
         buffer.resize(frame_size);
-        //std::cout << "Frame size : " << frame_size << std::endl; 
         int total_bytes_received = 0;
         while (total_bytes_received < frame_size) 
         {
             int result = recv(sock, buffer.data() + total_bytes_received, frame_size - total_bytes_received, 0);
             if (result <= 0) 
             {
-                cerr << "Error receiving frame data. Stopping..." << endl;
+                LOG(LOG_LEVEL_ERROR,"\nError receiving frame data. Stopping...");
                 break;
             }
             total_bytes_received += result;
         }
         if (total_bytes_received != frame_size) 
         {
-            cerr << "Warning: Received frame size (" << total_bytes_received << ") does not match expected size (" << frame_size << ")." << endl;
+            LOG(LOG_LEVEL_ERROR,"Warning: Received frame size (%d) does not match expected size (%d). ",total_bytes_received, frame_size);
             continue; 
         }
 
@@ -104,7 +97,7 @@ void record_video(int sock)
         Mat frame = imdecode(buffer, IMREAD_COLOR);
         if (frame.empty()) 
         {
-            cerr << "Error decoding frame." << endl;
+            LOG(LOG_LEVEL_ERROR,"\nError decoding frame.");
             break;
         }
         video.write(frame);
@@ -113,14 +106,14 @@ void record_video(int sock)
         if (waitKey(30) == 27) 
         {
             cv::destroyAllWindows();
-            cout << "Stopping recording..." << endl;
+            LOG(LOG_LEVEL_INFO,"\n\nStopping recording...\n");
             break;
         }
     }
     video.release();
-    cout << "Video saved as " << filename << endl;
+    LOG(LOG_LEVEL_INFO,"\n\nVideo saved as %s\n",filename.c_str());
 }
-void process_command(int sock) 
+void ProcessCommand(int sock) 
 {
     char buffer[1024] = {0};
     string command;
@@ -131,7 +124,7 @@ void process_command(int sock)
         if (command == "save_data") 
         {
             send(sock, command.c_str(), command.length(), 0);
-            record_video(sock);
+            RecordVideo(sock);
         } 
         else if (command == "exit") 
         {
@@ -160,7 +153,6 @@ int ConnectToServer(int sock, const char *server_ip, int port)
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
-    // Convert IP from text to binary
     if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0)
     {
         LOG(LOG_LEVEL_ERROR, "Invalid address/Address not supported\n");
